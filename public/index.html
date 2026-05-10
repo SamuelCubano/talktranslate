@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TalkTranslate</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,system-ui,sans-serif; background:#0d0d14; color:#e0e0f0; height:100vh; display:flex; align-items:center; justify-content:center; }
+.card { background:#181825; border:1px solid #2a2a40; border-radius:16px; padding:32px; width:400px; max-width:95vw; text-align:center; }
+h1 { font-size:24px; margin-bottom:4px; background:linear-gradient(135deg,#6c5ce7,#a29bfe); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+p { color:#8888aa; font-size:13px; margin-bottom:20px; }
+input,select { width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:1px solid #2a2a40; background:#0d0d14; color:#e0e0f0; font-size:14px; }
+select { cursor:pointer; }
+button { width:100%; padding:12px; border-radius:8px; border:none; font-size:15px; font-weight:600; cursor:pointer; transition:.2s; }
+.btn-primary { background:linear-gradient(135deg,#6c5ce7,#a29bfe); color:white; }
+.btn-primary:hover { transform:translateY(-1px); box-shadow:0 4px 20px rgba(108,92,231,.3); }
+.btn-secondary { background:#2a2a40; color:#e0e0f0; }
+.btn-secondary:hover { background:#3a3a50; }
+.btn-danger { background:#ff6b6b; color:white; margin-top:16px; }
+.hidden { display:none; }
+.room-id-box { background:#0d0d14; border-radius:8px; padding:12px; margin:12px 0; font-family:monospace; font-size:14px; color:#6c5ce7; }
+.sub-box { background:#0d0d14; border-radius:8px; padding:16px; margin-top:16px; min-height:60px; display:flex; flex-direction:column; gap:4px; }
+.sub-original { font-size:14px; color:#8888aa; }
+.sub-translated { font-size:16px; color:#00cec9; font-weight:500; }
+.divider { color:#3a3a50; margin:16px 0; font-size:13px; }
+.header { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:16px; }
+.status { font-size:11px; color:#555577; margin-top:8px; }
+</style>
+</head>
+<body>
+
+<div class="card" id="lobby">
+  <div class="header">
+    <svg width="32" height="32" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" stroke="#6c5ce7" stroke-width="2.5" fill="none"/><path d="M16 28c0-4.418 3.582-8 8-8s8 3.582 8 8" stroke="#6c5ce7" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="24" cy="18" r="4" stroke="#6c5ce7" stroke-width="2" fill="none"/></svg>
+    <h1>TalkTranslate</h1>
+  </div>
+  <p>Llámada de voz con traducción en vivo</p>
+
+  <input id="nickname" placeholder="Tu nombre" maxlength="20">
+  <select id="my-lang">
+    <option value="es">Español</option><option value="en">English</option>
+    <option value="pt">Português</option><option value="fr">Français</option>
+    <option value="de">Deutsch</option><option value="ja">日本語</option>
+  </select>
+  <select id="target-lang">
+    <option value="en">English</option><option value="es">Español</option>
+    <option value="pt">Português</option><option value="fr">Français</option>
+    <option value="de">Deutsch</option><option value="ja">日本語</option>
+  </select>
+
+  <button class="btn-primary" onclick="createRoom()">Crear sala</button>
+  <div class="divider">— o —</div>
+  <input id="room-input" placeholder="ID de sala (ej: abc123)">
+  <button class="btn-secondary" onclick="joinRoom()">Unirse</button>
+</div>
+
+<div class="card hidden" id="room">
+  <div class="header">
+    <svg width="32" height="32" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" stroke="#6c5ce7" stroke-width="2.5" fill="none"/><path d="M16 28c0-4.418 3.582-8 8-8s8 3.582 8 8" stroke="#6c5ce7" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="24" cy="18" r="4" stroke="#6c5ce7" stroke-width="2" fill="none"/></svg>
+    <h1 style="font-size:18px">TalkTranslate</h1>
+  </div>
+  <p style="font-size:12px">Sala: <span id="room-id-display" style="font-family:monospace;color:#6c5ce7"></span></p>
+  <p style="font-size:11px;color:#555577;margin-bottom:12px"><span id="status-msg">Esperando a que alguien se una...</span></p>
+
+  <audio id="remote-audio" autoplay></audio>
+
+  <div class="sub-box" id="sub-box">
+    <div class="sub-original" id="sub-original">🎤 Escuchando...</div>
+    <div class="sub-translated" id="sub-translated">🌍 Traducción aparecerá aquí</div>
+  </div>
+
+  <button class="btn-danger" onclick="leaveRoom()">Colgar</button>
+</div>
+
+<script>
+// ============== GLOBALS ==============
+let socket, peer, myStream, roomId, conn, peerId;
+let recognition, isCallActive = false;
+const lobby = document.getElementById('lobby');
+const room = document.getElementById('room');
+
+// ============== WEBSOCKET (señalización) ==============
+function connectSocket() {
+  socket = io();
+
+  socket.on('other-user', (otherId) => {
+    peerId = otherId;
+    document.getElementById('status-msg').textContent = 'Conectando...';
+    setTimeout(() => startCall(), 500);
+  });
+
+  socket.on('offer', async ({ offer, from }) => {
+    peerId = from;
+    if (!peer) await createPeer(true);
+    const remoteDesc = new RTCSessionDescription(offer);
+    await peer.setRemoteDescription(remoteDesc);
+    const answer = await peer.createAnswer();
+    await peer.setLocalDescription(answer);
+    socket.emit('answer', { target: from, answer });
+    document.getElementById('status-msg').textContent = 'Conectado ✅';
+    isCallActive = true;
+    startSTT();
+  });
+
+  socket.on('answer', async ({ answer }) => {
+    await peer.setRemoteDescription(new RTCSessionDescription(answer));
+    document.getElementById('status-msg').textContent = 'Conectado ✅';
+    isCallActive = true;
+    startSTT();
+  });
+
+  socket.on('ice-candidate', ({ candidate }) => {
+    if (peer) peer.addIceCandidate(new RTCIceCandidate(candidate));
+  });
+
+  socket.on('user-connected', (userId) => {
+    document.getElementById('status-msg').textContent = 'Alguien se conectó...';
+    peerId = userId;
+    startCall();
+  });
+
+  socket.on('user-disconnected', () => {
+    document.getElementById('status-msg').textContent = 'La otra persona se fue ❌';
+    isCallActive = false;
+    if (recognition) recognition.stop();
+  });
+
+  socket.on('translation', ({ text, lang }) => {
+    document.getElementById('sub-original').textContent = '🔊 ' + text;
+    speakTranslation(text, lang);
+  });
+}
+
+// ============== WEBRTC ==============
+async function createPeer(isAnswerer = false) {
+  peer = new RTCPeerConnection({
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+  });
+
+  peer.onicecandidate = (e) => {
+    if (e.candidate) socket.emit('ice-candidate', { target: peerId, candidate: e.candidate });
+  };
+
+  peer.ontrack = (e) => {
+    document.getElementById('remote-audio').srcObject = e.streams[0];
+  };
+
+  if (!isAnswerer) {
+    myStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    myStream.getTracks().forEach((t) => peer.addTrack(t, myStream));
+  }
+}
+
+async function startCall() {
+  if (peer) peer.close();
+  await createPeer(false);
+  const offer = await peer.createOffer();
+  await peer.setLocalDescription(offer);
+  socket.emit('offer', { target: peerId, offer });
+}
+
+// ============== STT + TRADUCCIÓN ==============
+function startSTT() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { document.getElementById('sub-original').textContent = 'STT no soportado en este navegador'; return; }
+
+  const myLang = document.getElementById('my-lang').value;
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = myLang === 'es' ? 'es-ES' : myLang + '-' + myLang.toUpperCase();
+  recognition.maxAlternatives = 1;
+
+  let lastText = '';
+  recognition.onresult = async (e) => {
+    let text = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) text += e.results[i][0].transcript;
+    if (!text || text === lastText) return;
+    lastText = text;
+
+    document.getElementById('sub-original').textContent = '🎤 ' + text;
+    document.getElementById('sub-translated').textContent = '🌍 Traduciendo...';
+
+    const targetLang = document.getElementById('target-lang').value;
+    try {
+      const res = await fetch('https://libretranslate.com/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: text, source: myLang, target: targetLang, format: 'text' }),
+      });
+      const data = await res.json();
+      const translated = data.translatedText || text;
+
+      document.getElementById('sub-translated').textContent = '🌍 ' + translated;
+
+      // Mandar traducción al otro
+      socket.emit('translation', { roomId, text: translated, lang: targetLang });
+    } catch {
+      document.getElementById('sub-translated').textContent = '🌍 ' + text + ' (traducción offline)';
+    }
+  };
+
+  recognition.onerror = () => {
+    // Chrome a veces bota el recognizer, lo reiniciamos
+    recognition.stop();
+    setTimeout(() => { if (isCallActive) recognition.start(); }, 1000);
+  };
+
+  recognition.onend = () => {
+    if (isCallActive) recognition.start();
+  };
+
+  recognition.start();
+}
+
+function speakTranslation(text, lang) {
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = lang || 'en-US';
+  utterance.rate = 0.85;
+  utterance.pitch = 1;
+  window.speechSynthesis.speak(utterance);
+}
+
+// ============== UI ==============
+function createRoom() {
+  const nick = document.getElementById('nickname').value.trim() || 'Anon';
+  const myLang = document.getElementById('my-lang').value;
+
+  connectSocket();
+
+  socket.on('connect', () => {
+    roomId = Math.random().toString(36).substring(2, 8);
+    socket.emit('join-room', roomId);
+    lobby.classList.add('hidden');
+    room.classList.remove('hidden');
+    document.getElementById('room-id-display').textContent = roomId;
+    document.getElementById('status-msg').textContent = 'Comparte este ID con tu amigo: ' + roomId;
+  });
+}
+
+function joinRoom() {
+  const input = document.getElementById('room-input').value.trim();
+  if (!input) return;
+  const nick = document.getElementById('nickname').value.trim() || 'Anon';
+
+  connectSocket();
+
+  socket.on('connect', () => {
+    roomId = input;
+    socket.emit('join-room', roomId);
+    lobby.classList.add('hidden');
+    room.classList.remove('hidden');
+    document.getElementById('room-id-display').textContent = roomId;
+    document.getElementById('status-msg').textContent = 'Conectando a la sala...';
+  });
+}
+
+function leaveRoom() {
+  isCallActive = false;
+  if (recognition) recognition.stop();
+  if (peer) { peer.close(); peer = null; }
+  if (myStream) { myStream.getTracks().forEach(t => t.stop()); myStream = null; }
+  if (socket) { socket.disconnect(); socket = null; }
+  room.classList.add('hidden');
+  lobby.classList.remove('hidden');
+  document.getElementById('sub-original').textContent = '🎤 Escuchando...';
+  document.getElementById('sub-translated').textContent = '🌍 Traducción aparecerá aquí';
+}
+</script>
+</body>
+</html>
