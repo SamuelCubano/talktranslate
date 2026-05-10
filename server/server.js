@@ -38,6 +38,15 @@ io.on('connection', (socket) => {
     socket.to(data.roomId).emit('translation', { text: data.text, lang: data.lang });
   });
 
+  socket.on('chat-message', (data) => {
+    socket.to(data.roomId).emit('chat-message', {
+      nickname: socket.roomData?.nickname || 'Anon',
+      original: data.original,
+      translated: data.translated,
+      lang: data.lang
+    });
+  });
+
   socket.on('disconnect', () => {
     if (socket.roomData) {
       const { roomId, nickname } = socket.roomData;
