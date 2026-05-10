@@ -86,15 +86,17 @@ const room = document.getElementById('room');
 function connectSocket() {
   socket = io();
 
-  socket.on('other-user', (otherId) => {
-    peerId = otherId;
-    document.getElementById('status-msg').textContent = 'Conectando...';
-    setTimeout(() => startCall(), 500);
+  // El que creó la sala inicia la llamada cuando alguien se une
+  socket.on('user-connected', (userId) => {
+    document.getElementById('status-msg').textContent = 'Alguien se conectó...';
+    peerId = userId;
+    startCall();
   });
 
+  // El que recibe una oferta, responde (NO inicia otra oferta)
   socket.on('offer', async ({ offer, from }) => {
     peerId = from;
-    if (!peer) await createPeer(true);
+    if (!peer) await createPeer();
     const remoteDesc = new RTCSessionDescription(offer);
     await peer.setRemoteDescription(remoteDesc);
     const answer = await peer.createAnswer();
@@ -116,12 +118,6 @@ function connectSocket() {
     if (peer) peer.addIceCandidate(new RTCIceCandidate(candidate));
   });
 
-  socket.on('user-connected', (userId) => {
-    document.getElementById('status-msg').textContent = 'Alguien se conectó...';
-    peerId = userId;
-    startCall();
-  });
-
   socket.on('user-disconnected', () => {
     document.getElementById('status-msg').textContent = 'La otra persona se fue ❌';
     isCallActive = false;
@@ -135,7 +131,7 @@ function connectSocket() {
 }
 
 // ============== WEBRTC ==============
-async function createPeer(isAnswerer = false) {
+async function createPeer() {
   peer = new RTCPeerConnection({
     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
   });
@@ -148,15 +144,13 @@ async function createPeer(isAnswerer = false) {
     document.getElementById('remote-audio').srcObject = e.streams[0];
   };
 
-  if (!isAnswerer) {
-    myStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    myStream.getTracks().forEach((t) => peer.addTrack(t, myStream));
-  }
+  myStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  myStream.getTracks().forEach((t) => peer.addTrack(t, myStream));
 }
 
 async function startCall() {
   if (peer) peer.close();
-  await createPeer(false);
+  await createPeer();
   const offer = await peer.createOffer();
   await peer.setLocalDescription(offer);
   socket.emit('offer', { target: peerId, offer });
@@ -203,8 +197,8 @@ function startSTT() {
     }
   };
 
-  recognition.onerror = () => {
-    // Chrome a veces bota el recognizer, lo reiniciamos
+  recognition.onerror = (e) => {
+    document.getElementById('sub-original').textContent = '🎤 Error: ' + e.error;
     recognition.stop();
     setTimeout(() => { if (isCallActive) recognition.start(); }, 1000);
   };

@@ -17,13 +17,10 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     socket.roomId = roomId;
 
-    // Si ya hay alguien, avisarle que llegó alguien nuevo
     const clients = Array.from(io.sockets.adapter.rooms.get(roomId) || []);
     if (clients.length === 2) {
+      // Avisar al primero que alguien se unió (él inicia la llamada)
       socket.to(roomId).emit('user-connected', socket.id);
-      // Decirle al nuevo quién es el otro
-      const other = clients.find((id) => id !== socket.id);
-      socket.emit('other-user', other);
     }
     console.log(`${socket.id} entró a sala ${roomId} (${clients.length} personas)`);
   });
