@@ -9,35 +9,47 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Un solo proposito: relay de señales WebRTC entre 2 personas
+const rooms = {};
+
 io.on('connection', (socket) => {
   console.log('Conectado:', socket.id);
 
-  socket.on('join-room', (roomId) => {
+  socket.on('join-room', ({ roomId, nickname }) => {
     socket.join(roomId);
-    socket.roomId = roomId;
+    socket.roomData = { roomId, nickname };
 
-    const clients = Array.from(io.sockets.adapter.rooms.get(roomId) || []);
-    if (clients.length === 2) {
-      // Avisar al primero que alguien se unió (él inicia la llamada)
+    if (!rooms[roomId]) rooms[roomId] = [];
+    rooms[roomId].push({ id: socket.id, nickname });
+
+    io.to(roomId).emit('room-participants', rooms[roomId]);
+
+    console.log(`${nickname} (${socket.id}) entró a sala ${roomId} (${rooms[roomId].length} personas)`);
+
+    if (rooms[roomId].length === 2) {
       socket.to(roomId).emit('user-connected', socket.id);
     }
-    console.log(`${socket.id} entró a sala ${roomId} (${clients.length} personas)`);
   });
 
-  // Relay de señales WebRTC
   socket.on('offer', (data) => socket.to(data.target).emit('offer', { offer: data.offer, from: socket.id }));
   socket.on('answer', (data) => socket.to(data.target).emit('answer', { answer: data.answer, from: socket.id }));
   socket.on('ice-candidate', (data) => socket.to(data.target).emit('ice-candidate', { candidate: data.candidate, from: socket.id }));
 
-  // Relay de transcripciones traducidas
   socket.on('translation', (data) => {
     socket.to(data.roomId).emit('translation', { text: data.text, lang: data.lang });
   });
 
   socket.on('disconnect', () => {
-    if (socket.roomId) {
-      socket.to(socket.roomId).emit('user-disconnected', socket.id);
+    if (socket.roomData) {
+      const { roomId, nickname } = socket.roomData;
+      if (rooms[roomId]) {
+        rooms[roomId] = rooms[roomId].filter(p => p.id !== socket.id);
+        if (rooms[roomId].length === 0) {
+          delete rooms[roomId];
+        } else {
+          io.to(roomId).emit('room-participants', rooms[roomId]);
+          io.to(roomId).emit('user-disconnected', socket.id);
+        }
+      }
     }
     console.log('Desconectado:', socket.id);
   });

@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TalkTranslate</title>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:-apple-system,system-ui,sans-serif; background:#0d0d14; color:#e0e0f0; height:100vh; display:flex; align-items:center; justify-content:center; }
@@ -63,7 +62,8 @@ button { width:100%; padding:12px; border-radius:8px; border:none; font-size:15p
     <h1 style="font-size:18px">TalkTranslate</h1>
   </div>
   <p style="font-size:12px">Sala: <span id="room-id-display" style="font-family:monospace;color:#6c5ce7"></span></p>
-  <p style="font-size:11px;color:#555577;margin-bottom:12px"><span id="status-msg">Esperando a que alguien se una...</span></p>
+  <p style="font-size:11px;color:#555577;margin-bottom:4px"><span id="participants-msg"></span></p>
+  <p style="font-size:11px;color:#555577;margin-bottom:12px"><span id="status-msg"></span></p>
 
   <audio id="remote-audio" autoplay></audio>
 
@@ -86,14 +86,17 @@ const room = document.getElementById('room');
 function connectSocket() {
   socket = io();
 
-  // El que creó la sala inicia la llamada cuando alguien se une
+  socket.on('room-participants', (participants) => {
+    const nicknames = participants.map(p => p.nickname).join(', ');
+    document.getElementById('participants-msg').textContent =
+      `👤 ${participants.length} en sala: ${nicknames}`;
+  });
+
   socket.on('user-connected', (userId) => {
-    document.getElementById('status-msg').textContent = 'Alguien se conectó...';
     peerId = userId;
     startCall();
   });
 
-  // El que recibe una oferta, responde (NO inicia otra oferta)
   socket.on('offer', async ({ offer, from }) => {
     peerId = from;
     if (!peer) await createPeer();
@@ -119,7 +122,6 @@ function connectSocket() {
   });
 
   socket.on('user-disconnected', () => {
-    document.getElementById('status-msg').textContent = 'La otra persona se fue ❌';
     isCallActive = false;
     if (recognition) recognition.stop();
   });
@@ -224,15 +226,17 @@ function createRoom() {
   const nick = document.getElementById('nickname').value.trim() || 'Anon';
   const myLang = document.getElementById('my-lang').value;
 
+  document.getElementById('participants-msg').textContent = '';
+  document.getElementById('status-msg').textContent = 'Conectando al servidor...';
   connectSocket();
 
   socket.on('connect', () => {
     roomId = Math.random().toString(36).substring(2, 8);
-    socket.emit('join-room', roomId);
+    socket.emit('join-room', { roomId, nickname: nick });
     lobby.classList.add('hidden');
     room.classList.remove('hidden');
     document.getElementById('room-id-display').textContent = roomId;
-    document.getElementById('status-msg').textContent = 'Comparte este ID con tu amigo: ' + roomId;
+    document.getElementById('status-msg').textContent = '⏳ Comparte este ID con tu amigo';
   });
 }
 
@@ -241,15 +245,17 @@ function joinRoom() {
   if (!input) return;
   const nick = document.getElementById('nickname').value.trim() || 'Anon';
 
+  document.getElementById('participants-msg').textContent = '';
+  document.getElementById('status-msg').textContent = 'Conectando al servidor...';
   connectSocket();
 
   socket.on('connect', () => {
     roomId = input;
-    socket.emit('join-room', roomId);
+    socket.emit('join-room', { roomId, nickname: nick });
     lobby.classList.add('hidden');
     room.classList.remove('hidden');
     document.getElementById('room-id-display').textContent = roomId;
-    document.getElementById('status-msg').textContent = 'Conectando a la sala...';
+    document.getElementById('status-msg').textContent = '⏳ Uniéndose a la sala...';
   });
 }
 
@@ -261,6 +267,8 @@ function leaveRoom() {
   if (socket) { socket.disconnect(); socket = null; }
   room.classList.add('hidden');
   lobby.classList.remove('hidden');
+  document.getElementById('participants-msg').textContent = '';
+  document.getElementById('status-msg').textContent = '';
   document.getElementById('sub-original').textContent = '🎤 Escuchando...';
   document.getElementById('sub-translated').textContent = '🌍 Traducción aparecerá aquí';
 }
