@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,77 +7,143 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="app" id="app">
-  <!-- LOBBY -->
-  <div class="lobby" id="lobby">
-    <div class="card">
-      <div class="logo">
-        <svg width="36" height="36" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" stroke="#7c5cfc" stroke-width="2.5" fill="none"/><path d="M16 28c0-4.418 3.582-8 8-8s8 3.582 8 8" stroke="#7c5cfc" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="24" cy="18" r="4" stroke="#7c5cfc" stroke-width="2" fill="none"/></svg>
-        <h1>TalkTranslate</h1>
-      </div>
-      <p class="subtitle">Chat con traducción automática</p>
 
-      <div class="field">
-        <label>👤 Tu nombre</label>
-        <input id="nickname" placeholder="Escribe tu nombre" maxlength="20">
-      </div>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">TT</div>
+    <nav class="sidebar-nav">
+      <button class="nav-btn active" data-view="home" title="Inicio">
+        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M3 13h1v7c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-7h1a1 1 0 0 0 .7-1.7l-9-8.5a1 1 0 0 0-1.4 0l-9 8.5A1 1 0 0 0 3 13zm7 7v-5h4v5h-4z" fill="currentColor"/></svg>
+      </button>
+      <button class="nav-btn" data-view="settings" title="Ajustes">
+        <svg viewBox="0 0 24 24" width="24" height="24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.26.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z" fill="currentColor"/></svg>
+      </button>
+    </nav>
+    <div class="sidebar-spacer"></div>
+    <button class="nav-btn" id="theme-toggle" title="Cambiar tema">
+      <svg class="icon-sun" viewBox="0 0 24 24" width="22" height="22"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0-5a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0V3a1 1 0 0 1 1-1zM4.22 4.22a1 1 0 0 1 1.41 0l1.42 1.42a1 1 0 0 1-1.42 1.41L4.22 5.64a1 1 0 0 1 0-1.42zm15.56 0a1 1 0 0 1 0 1.41l-1.42 1.42a1 1 0 1 1-1.41-1.41l1.42-1.42a1 1 0 0 1 1.41 0zM12 20a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0v-2a1 1 0 0 1 1-1zm-7.78 1.78a1 1 0 0 1 0-1.41l1.42-1.42a1 1 0 0 1 1.41 1.41l-1.42 1.42a1 1 0 0 1-1.41 0zm15.56 0a1 1 0 0 1-1.41 0l-1.42-1.42a1 1 0 0 1 1.41-1.41l1.42 1.42a1 1 0 0 1 0 1.41zM4 12a1 1 0 0 1-1 1H1a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1zm18 0a1 1 0 0 1-1 1h-2a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1z" fill="currentColor"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" width="22" height="22"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.89 5.89 0 0 1-3.75 1.54A6.04 6.04 0 0 1 11.1 6.84 5.89 5.89 0 0 1 12.64 3.1 9.1 9.1 0 0 0 12 3z" fill="currentColor"/></svg>
+    </button>
+  </aside>
 
-      <div class="lang-selector">
-        <div class="lang-col">
-          <label>🗣️ Hablas</label>
-          <select id="my-lang">
-            <option value="es">Español</option><option value="en">English</option>
-            <option value="pt">Português</option><option value="fr">Français</option>
-            <option value="de">Deutsch</option><option value="ja">日本語</option>
-          </select>
+  <!-- MAIN -->
+  <main class="main">
+    <!-- HOME / LOBBY -->
+    <section class="view active" id="view-home">
+      <div class="lobby-center">
+        <div class="card lobby-card">
+          <div class="lobby-header">
+            <div class="lobby-logo">
+              <svg width="40" height="40" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" stroke="var(--accent)" stroke-width="2.5" fill="none"/><path d="M16 28c0-4.418 3.582-8 8-8s8 3.582 8 8" stroke="var(--accent)" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="24" cy="18" r="4" stroke="var(--accent)" stroke-width="2" fill="none"/></svg>
+              <h1>TalkTranslate</h1>
+            </div>
+            <p class="lobby-sub">Chat con traducción automática en tiempo real</p>
+          </div>
+
+          <div class="field">
+            <label>👤 Tu nombre</label>
+            <input id="nickname" placeholder="Escribe tu nombre" maxlength="20">
+          </div>
+
+          <div class="lang-selector">
+            <div class="lang-col">
+              <label>🗣️ Hablas</label>
+              <select id="my-lang"></select>
+            </div>
+            <div class="lang-arrow">→</div>
+            <div class="lang-col">
+              <label>🌍 Traducir a</label>
+              <select id="target-lang"></select>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-block" onclick="createRoom()">Crear sala</button>
+          <div class="divider">— o —</div>
+          <div class="field">
+            <label>🔑 ID de sala</label>
+            <input id="room-input" placeholder="Ej: abc123">
+          </div>
+          <button class="btn btn-secondary btn-block" onclick="joinRoom()">Unirse</button>
         </div>
-        <div class="lang-arrow">→</div>
-        <div class="lang-col">
-          <label>🌍 Traducir a</label>
-          <select id="target-lang">
-            <option value="en">English</option><option value="es">Español</option>
-            <option value="pt">Português</option><option value="fr">Français</option>
-            <option value="de">Deutsch</option><option value="ja">日本語</option>
-          </select>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="view-settings">
+      <div class="settings-container">
+        <div class="card settings-card">
+          <h2 class="settings-title">⚙️ Ajustes</h2>
+
+          <div class="setting-group">
+            <label class="setting-label">Idioma por defecto</label>
+            <select id="set-my-lang"></select>
+          </div>
+          <div class="setting-group">
+            <label class="setting-label">Idioma de traducción por defecto</label>
+            <select id="set-target-lang"></select>
+          </div>
+          <div class="setting-group">
+            <label class="setting-label">Tema</label>
+            <div class="theme-options">
+              <button class="theme-btn" data-theme="dark" id="theme-dark">🌙 Oscuro</button>
+              <button class="theme-btn" data-theme="light" id="theme-light">☀️ Claro</button>
+            </div>
+          </div>
+          <div class="setting-group">
+            <label class="setting-label">Nombre predeterminado</label>
+            <input id="set-nickname" placeholder="Tu nombre" maxlength="20">
+          </div>
+
+          <button class="btn btn-primary btn-block" onclick="saveSettings()">Guardar ajustes</button>
+          <button class="btn btn-secondary btn-block" style="margin-top:8px" onclick="switchView('home')">Volver</button>
+        </div>
+
+        <div class="card about-card">
+          <h3>Acerca de</h3>
+          <p>TalkTranslate es un chat con traducción automática impulsado por MyMemory API. Crea una sala, comparte el ID y chatea con cualquier persona sin importar el idioma.</p>
+          <p class="about-version">v2.0</p>
         </div>
       </div>
+    </section>
 
-      <button class="btn btn-primary" onclick="createRoom()">Crear sala</button>
-      <div class="divider">— o —</div>
-      <input id="room-input" placeholder="ID de sala (ej: abc123)">
-      <button class="btn btn-secondary" onclick="joinRoom()">Unirse</button>
-    </div>
-  </div>
-
-  <!-- CHAT ROOM -->
-  <div class="room hidden" id="room">
-    <div class="chat-header">
-      <div class="chat-header-info">
-        <div class="chat-header-top">
-          <span class="chat-title">TalkTranslate</span>
-          <span class="room-badge" id="room-id-display"></span>
+    <!-- CHAT ROOM -->
+    <section class="view" id="view-room">
+      <div class="room-container">
+        <div class="room-header">
+          <div class="rh-left">
+            <span class="rh-title">💬 <span id="room-id-display"></span></span>
+            <span class="rh-participants" id="participants-msg"></span>
+          </div>
+          <div class="rh-center">
+            <select id="chat-my-lang" class="lang-badge"></select>
+            <span class="rh-arrow">→</span>
+            <select id="chat-target-lang" class="lang-badge"></select>
+          </div>
+          <button class="btn-icon" onclick="leaveRoom()" title="Salir">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/></svg>
+          </button>
         </div>
-        <div class="chat-participants" id="participants-msg"></div>
-      </div>
-      <div class="chat-header-langs">
-        <select id="chat-my-lang" class="lang-select-sm"></select>
-        <span class="lang-arrow-sm">→</span>
-        <select id="chat-target-lang" class="lang-select-sm"></select>
-      </div>
-      <button class="btn btn-leave" onclick="leaveRoom()" title="Salir">✕</button>
-    </div>
 
-    <div class="chat-messages" id="chat-msgs">
-      <div class="msg-placeholder" id="msg-placeholder">
-        <p>Conéctate con alguien para empezar a chatear</p>
-      </div>
-    </div>
+        <div class="chat-messages" id="chat-msgs">
+          <div class="msg-placeholder" id="msg-placeholder">
+            <div class="ph-icon">💬</div>
+            <p>Conéctate con alguien para empezar a chatear</p>
+          </div>
+        </div>
 
-    <div class="chat-input-area">
-      <input id="chat-input" placeholder="Escribe un mensaje..." maxlength="500">
-      <button class="btn btn-send" onclick="sendChat()" id="send-btn">Enviar</button>
-    </div>
-  </div>
+        <div class="chat-input-area">
+          <input id="chat-input" placeholder="Escribe un mensaje..." maxlength="500">
+          <button class="btn btn-send" onclick="sendChat()">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+  </main>
 </div>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>

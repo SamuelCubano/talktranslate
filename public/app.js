@@ -8,39 +8,84 @@ let socket, roomId, myNick = 'Anon';
 
 function escapeHtml(t) {
   const d = document.createElement('div');
-  d.textContent = t;
-  return d.innerHTML;
+  d.textContent = t; return d.innerHTML;
 }
 
 function fmtTime(ts) {
-  const d = new Date(ts);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 function langName(code) {
   return LANGUAGES.find(l => l.code === code)?.name || code;
 }
 
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function switchView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  const btn = document.querySelector(`[data-view="${id}"]`);
+  if (btn) btn.classList.add('active');
+}
+
+// ===== SETTINGS =====
+function loadSettings() {
+  try {
+    return JSON.parse(localStorage.getItem('tt-settings')) || {};
+  } catch { return {}; }
+}
+function saveSettings() {
+  const s = {
+    myLang: document.getElementById('set-my-lang').value,
+    targetLang: document.getElementById('set-target-lang').value,
+    theme: document.documentElement.getAttribute('data-theme'),
+    nickname: document.getElementById('set-nickname').value.trim()
+  };
+  localStorage.setItem('tt-settings', JSON.stringify(s));
+  applySettings(s);
+  toast('✅ Ajustes guardados');
+}
+function applySettings(s) {
+  if (s.myLang) {
+    document.getElementById('my-lang').value = s.myLang;
+    document.getElementById('chat-my-lang').value = s.myLang;
+    document.getElementById('set-my-lang').value = s.myLang;
+  }
+  if (s.targetLang) {
+    document.getElementById('target-lang').value = s.targetLang;
+    document.getElementById('chat-target-lang').value = s.targetLang;
+    document.getElementById('set-target-lang').value = s.targetLang;
+  }
+  if (s.theme) {
+    document.documentElement.setAttribute('data-theme', s.theme);
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === s.theme));
+  }
+  if (s.nickname) {
+    document.getElementById('nickname').value = s.nickname;
+    document.getElementById('set-nickname').value = s.nickname;
+  }
+}
+
+// ===== POPULATE SELECTS =====
 function populateSelects() {
-  for (const id of ['my-lang', 'target-lang', 'chat-my-lang', 'chat-target-lang']) {
+  const opts = LANGUAGES.map(l => `<option value="${l.code}">${l.name}</option>`).join('');
+  for (const id of ['my-lang','target-lang','chat-my-lang','chat-target-lang','set-my-lang','set-target-lang']) {
     const sel = document.getElementById(id);
-    if (!sel) continue;
-    sel.innerHTML = LANGUAGES.map(l => `<option value="${l.code}">${l.name}</option>`).join('');
+    if (sel) sel.innerHTML = opts;
   }
   document.getElementById('target-lang').value = 'en';
   document.getElementById('chat-target-lang').value = 'en';
+  document.getElementById('set-target-lang').value = 'en';
 }
 populateSelects();
+applySettings(loadSettings());
 
-function syncLangSelects() {
-  const from = document.getElementById('my-lang');
-  const to = document.getElementById('target-lang');
-  const cfrom = document.getElementById('chat-my-lang');
-  const cto = document.getElementById('chat-target-lang');
-  if (from && cfrom) cfrom.value = from.value;
-  if (to && cto) cto.value = to.value;
-}
-
+// ===== LANGUAGE SYNC =====
 document.getElementById('chat-my-lang')?.addEventListener('change', () => {
   document.getElementById('my-lang').value = document.getElementById('chat-my-lang').value;
 });
@@ -48,6 +93,7 @@ document.getElementById('chat-target-lang')?.addEventListener('change', () => {
   document.getElementById('target-lang').value = document.getElementById('chat-target-lang').value;
 });
 
+// ===== TRANSLATE =====
 async function translate(text, source, target) {
   if (!text || source === target) return text;
   try {
@@ -58,11 +104,10 @@ async function translate(text, source, target) {
     });
     const data = await res.json();
     return data.translatedText || text;
-  } catch {
-    return text;
-  }
+  } catch { return text; }
 }
 
+// ===== CHAT MESSAGE =====
 function addMessage(nickname, original, translated, sourceLang, targetLang, time, isOwn) {
   const container = document.getElementById('chat-msgs');
   const ph = document.getElementById('msg-placeholder');
@@ -70,9 +115,7 @@ function addMessage(nickname, original, translated, sourceLang, targetLang, time
 
   const div = document.createElement('div');
   div.className = `msg ${isOwn ? 'own' : 'other'}`;
-
-  const sn = langName(sourceLang);
-  const tn = langName(targetLang);
+  const sn = langName(sourceLang), tn = langName(targetLang);
 
   div.innerHTML = `
     <div class="msg-header">
@@ -83,13 +126,13 @@ function addMessage(nickname, original, translated, sourceLang, targetLang, time
     <div class="msg-translated">${escapeHtml(translated)}</div>
     ${original !== translated ? `<div class="msg-original">${escapeHtml(original)}</div>` : ''}
   `;
-
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
 }
 
-// SOCKET
+// ===== SOCKET =====
 function connectSocket(cb) {
+  if (socket?.connected) { cb?.(); return; }
   socket = io();
 
   socket.on('connect', () => cb?.());
@@ -106,18 +149,19 @@ function connectSocket(cb) {
     const el = document.getElementById('chat-msgs');
     const d = document.createElement('div');
     d.className = 'msg other';
-    d.innerHTML = `<div class="msg-header"><span class="msg-name">Sistema</span></div>
-      <div class="msg-translated" style="color:#888;font-size:13px">Ambos conectados — empiecen a chatear</div>`;
+    d.innerHTML = `<div class="msg-header"><span class="msg-name">⚡ Sistema</span></div>
+      <div class="msg-translated" style="color:var(--text-secondary);font-size:13px">Ambos conectados — empiecen a chatear</div>`;
     el.appendChild(d);
     el.scrollTop = el.scrollHeight;
+    toast('🔗 Alguien se conectó');
   });
 
   socket.on('user-disconnected', () => {
     const el = document.getElementById('chat-msgs');
     const d = document.createElement('div');
     d.className = 'msg other';
-    d.innerHTML = `<div class="msg-header"><span class="msg-name">Sistema</span></div>
-      <div class="msg-translated" style="color:#ff6b6b;font-size:13px">Alguien se desconectó</div>`;
+    d.innerHTML = `<div class="msg-header"><span class="msg-name">⚡ Sistema</span></div>
+      <div class="msg-translated" style="color:var(--danger);font-size:13px">Alguien se desconectó</div>`;
     el.appendChild(d);
     el.scrollTop = el.scrollHeight;
   });
@@ -127,29 +171,43 @@ function connectSocket(cb) {
   });
 }
 
-// UI
+// ===== NAVIGATION =====
+document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
+  btn.addEventListener('click', () => switchView(btn.dataset.view));
+});
+
+document.getElementById('theme-toggle')?.addEventListener('click', () => {
+  const current = document.documentElement.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === next));
+});
+
+document.querySelectorAll('.theme-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.documentElement.setAttribute('data-theme', btn.dataset.theme);
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === btn.dataset.theme));
+  });
+});
+
+// ===== CREATE ROOM =====
 function createRoom() {
   myNick = document.getElementById('nickname').value.trim() || 'Anon';
-
-  document.getElementById('lobby').classList.add('hidden');
-  document.getElementById('room').classList.remove('hidden');
-  syncLangSelects();
+  switchView('room');
 
   connectSocket(() => {
     roomId = Math.random().toString(36).substring(2, 8);
     socket.emit('join-room', { roomId, nickname: myNick });
     document.getElementById('room-id-display').textContent = '#' + roomId;
+    toast('📋 Sala creada: ' + roomId);
   });
 }
 
 function joinRoom() {
   const input = document.getElementById('room-input').value.trim();
-  if (!input) return;
+  if (!input) { toast('⚠️ Escribe un ID de sala'); return; }
   myNick = document.getElementById('nickname').value.trim() || 'Anon';
-
-  document.getElementById('lobby').classList.add('hidden');
-  document.getElementById('room').classList.remove('hidden');
-  syncLangSelects();
+  switchView('room');
 
   connectSocket(() => {
     roomId = input;
@@ -160,37 +218,45 @@ function joinRoom() {
 
 function leaveRoom() {
   if (socket) { socket.disconnect(); socket = null; }
-  document.getElementById('room').classList.add('hidden');
-  document.getElementById('lobby').classList.remove('hidden');
-  document.getElementById('chat-msgs').innerHTML = `<div class="msg-placeholder" id="msg-placeholder">
-    <p>Conéctate con alguien para empezar a chatear</p></div>`;
+  document.getElementById('chat-msgs').innerHTML =
+    `<div class="msg-placeholder" id="msg-placeholder">
+      <div class="ph-icon">💬</div>
+      <p>Conéctate con alguien para empezar a chatear</p>
+    </div>`;
+  switchView('home');
+  toast('👋 Has salido de la sala');
 }
 
 async function sendChat() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
-  if (!text) return;
+  if (!text || !socket?.connected) return;
   input.value = '';
 
   const sourceLang = document.getElementById('chat-my-lang').value;
   const targetLang = document.getElementById('chat-target-lang').value;
-
   const translated = await translate(text, sourceLang, targetLang);
 
   addMessage(myNick, text, translated, sourceLang, targetLang, Date.now(), true);
-
-  if (socket?.connected) {
-    socket.emit('chat-message', {
-      roomId, original: text, translated, sourceLang, targetLang
-    });
-  }
+  socket.emit('chat-message', { roomId, original: text, translated, sourceLang, targetLang });
 }
 
+// ===== KEYBOARD SHORTCUTS =====
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !document.getElementById('lobby').classList.contains('hidden')) {
-    const roomInput = document.getElementById('room-input');
-    if (document.activeElement === roomInput) { joinRoom(); return; }
-    const nick = document.getElementById('nickname');
-    if (document.activeElement === nick) { createRoom(); return; }
+  if (e.key === 'Enter') {
+    if (document.getElementById('view-room').classList.contains('active')) {
+      sendChat(); return;
+    }
+    if (document.activeElement === document.getElementById('room-input')) { joinRoom(); return; }
+    if (document.activeElement === document.getElementById('nickname')) { createRoom(); }
   }
+  if (e.key === 'Escape') {
+    if (document.getElementById('view-room').classList.contains('active')) leaveRoom();
+    else if (document.getElementById('view-settings').classList.contains('active')) switchView('home');
+  }
+});
+
+// ===== CHAT INPUT ENTER =====
+document.getElementById('chat-input')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendChat();
 });
