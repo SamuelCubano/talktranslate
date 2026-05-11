@@ -35,7 +35,24 @@ const rooms = {};
 io.on('connection', (socket) => {
   console.log('Conectado:', socket.id);
 
+  function leaveCurrentRoom() {
+    if (!socket.roomData) return;
+    const { roomId, nickname } = socket.roomData;
+    socket.leave(roomId);
+    if (rooms[roomId]) {
+      rooms[roomId] = rooms[roomId].filter(p => p.id !== socket.id);
+      if (rooms[roomId].length === 0) {
+        delete rooms[roomId];
+      } else {
+        io.to(roomId).emit('room-participants', rooms[roomId]);
+        io.to(roomId).emit('user-left', { nickname });
+      }
+    }
+    socket.roomData = null;
+  }
+
   socket.on('join-room', ({ roomId, nickname }) => {
+    leaveCurrentRoom();
     socket.join(roomId);
     socket.roomData = { roomId, nickname };
 
@@ -43,16 +60,23 @@ io.on('connection', (socket) => {
     rooms[roomId].push({ id: socket.id, nickname });
 
     io.to(roomId).emit('room-participants', rooms[roomId]);
+    socket.to(roomId).emit('user-joined', { nickname });
 
     console.log(`${nickname} (${socket.id}) entró a sala ${roomId} (${rooms[roomId].length} personas)`);
 
-    if (rooms[roomId].length === 2) {
+    if (roomId !== 'general' && rooms[roomId].length === 2) {
       io.to(roomId).emit('room-full');
     }
   });
 
+  socket.on('leave-room', () => {
+    leaveCurrentRoom();
+  });
+
   socket.on('chat-message', (data) => {
-    socket.to(data.roomId).emit('chat-message', {
+    const roomId = data.roomId || socket.roomData?.roomId;
+    if (!roomId) return;
+    socket.to(roomId).emit('chat-message', {
       nickname: socket.roomData?.nickname || 'Anon',
       original: data.original,
       translated: data.translated,
@@ -63,18 +87,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    if (socket.roomData) {
-      const { roomId, nickname } = socket.roomData;
-      if (rooms[roomId]) {
-        rooms[roomId] = rooms[roomId].filter(p => p.id !== socket.id);
-        if (rooms[roomId].length === 0) {
-          delete rooms[roomId];
-        } else {
-          io.to(roomId).emit('room-participants', rooms[roomId]);
-          io.to(roomId).emit('user-disconnected', socket.id);
-        }
-      }
-    }
+    leaveCurrentRoom();
     console.log('Desconectado:', socket.id);
   });
 });
