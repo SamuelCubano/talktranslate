@@ -47,16 +47,8 @@ io.on('connection', (socket) => {
     console.log(`${nickname} (${socket.id}) entró a sala ${roomId} (${rooms[roomId].length} personas)`);
 
     if (rooms[roomId].length === 2) {
-      socket.to(roomId).emit('user-connected', socket.id);
+      io.to(roomId).emit('room-full');
     }
-  });
-
-  socket.on('offer', (data) => socket.to(data.target).emit('offer', { offer: data.offer, from: socket.id }));
-  socket.on('answer', (data) => socket.to(data.target).emit('answer', { answer: data.answer, from: socket.id }));
-  socket.on('ice-candidate', (data) => socket.to(data.target).emit('ice-candidate', { candidate: data.candidate, from: socket.id }));
-
-  socket.on('translation', (data) => {
-    socket.to(data.roomId).emit('translation', { text: data.text, lang: data.lang });
   });
 
   socket.on('chat-message', (data) => {
@@ -64,7 +56,9 @@ io.on('connection', (socket) => {
       nickname: socket.roomData?.nickname || 'Anon',
       original: data.original,
       translated: data.translated,
-      lang: data.lang
+      targetLang: data.targetLang,
+      sourceLang: data.sourceLang,
+      time: Date.now()
     });
   });
 

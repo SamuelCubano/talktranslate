@@ -4,415 +4,83 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TalkTranslate</title>
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:-apple-system,system-ui,sans-serif; background:#0d0d14; color:#e0e0f0; height:100vh; display:flex; align-items:center; justify-content:center; }
-.card { background:#181825; border:1px solid #2a2a40; border-radius:16px; padding:32px; width:400px; max-width:95vw; text-align:center; }
-h1 { font-size:24px; margin-bottom:4px; background:linear-gradient(135deg,#6c5ce7,#a29bfe); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-p { color:#8888aa; font-size:13px; margin-bottom:20px; }
-input,select { width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:1px solid #2a2a40; background:#0d0d14; color:#e0e0f0; font-size:14px; }
-select { cursor:pointer; }
-button { width:100%; padding:12px; border-radius:8px; border:none; font-size:15px; font-weight:600; cursor:pointer; transition:.2s; }
-.btn-primary { background:linear-gradient(135deg,#6c5ce7,#a29bfe); color:white; }
-.btn-primary:hover { transform:translateY(-1px); box-shadow:0 4px 20px rgba(108,92,231,.3); }
-.btn-secondary { background:#2a2a40; color:#e0e0f0; }
-.btn-secondary:hover { background:#3a3a50; }
-.btn-danger { background:#ff6b6b; color:white; }
-.hidden { display:none; }
-.room-id-box { background:#0d0d14; border-radius:8px; padding:12px; margin:12px 0; font-family:monospace; font-size:14px; color:#6c5ce7; }
-.sub-box { background:#0d0d14; border-radius:8px; padding:16px; margin-top:16px; min-height:60px; display:flex; flex-direction:column; gap:4px; }
-.sub-original { font-size:14px; color:#8888aa; }
-.sub-translated { font-size:16px; color:#00cec9; font-weight:500; }
-.divider { color:#3a3a50; margin:16px 0; font-size:13px; }
-.header { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:16px; }
-.status { font-size:11px; color:#555577; margin-top:8px; }
-.lang-label { display:block; text-align:left; font-size:12px; color:#8888aa; margin-bottom:4px; font-weight:500; }
-.lang-label:not(:first-of-type) { margin-top:4px; }
-.lang-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
-.lang-row .lang-group { flex:1; }
-.lang-row select { margin:0; }
-.lang-arrow { color:#6c5ce7; font-size:20px; padding-top:8px; }
-.lang-badge { display:inline-block; font-size:11px; padding:2px 8px; border-radius:4px; margin-left:4px; }
-.lang-badge.source { background:#6c5ce733; color:#a29bfe; }
-.lang-badge.target { background:#00cec933; color:#00cec9; }
-.controls { display:flex; gap:8px; margin-top:16px; }
-.controls button { flex:1; }
-.btn-mic { background:#2a2a40; color:#e0e0f0; }
-.btn-mic:hover { background:#3a3a50; }
-.btn-mic.muted { background:#ff6b6b33; color:#ff6b6b; border:1px solid #ff6b6b55; }
-.chat-box { background:#0d0d14; border-radius:8px; margin-top:16px; max-height:160px; display:flex; flex-direction:column; }
-.chat-msgs { flex:1; overflow-y:auto; padding:8px; text-align:left; font-size:13px; min-height:60px; max-height:120px; }
-.chat-msgs div { margin-bottom:4px; line-height:1.3; }
-.chat-msgs .nick { color:#6c5ce7; font-weight:600; font-size:11px; }
-.chat-msgs .orig { color:#8888aa; font-size:12px; }
-.chat-msgs .trans { color:#00cec9; font-size:12px; }
-.chat-input-row { display:flex; gap:6px; padding:6px; border-top:1px solid #2a2a40; }
-.chat-input-row input { flex:1; margin:0; padding:8px; font-size:13px; }
-.chat-input-row button { width:auto; padding:8px 14px; margin:0; font-size:13px; }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="app" id="app">
+  <!-- LOBBY -->
+  <div class="lobby" id="lobby">
+    <div class="card">
+      <div class="logo">
+        <svg width="36" height="36" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" stroke="#7c5cfc" stroke-width="2.5" fill="none"/><path d="M16 28c0-4.418 3.582-8 8-8s8 3.582 8 8" stroke="#7c5cfc" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="24" cy="18" r="4" stroke="#7c5cfc" stroke-width="2" fill="none"/></svg>
+        <h1>TalkTranslate</h1>
+      </div>
+      <p class="subtitle">Chat con traducción automática</p>
 
-<div class="card" id="lobby">
-  <div class="header">
-    <svg width="32" height="32" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" stroke="#6c5ce7" stroke-width="2.5" fill="none"/><path d="M16 28c0-4.418 3.582-8 8-8s8 3.582 8 8" stroke="#6c5ce7" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="24" cy="18" r="4" stroke="#6c5ce7" stroke-width="2" fill="none"/></svg>
-    <h1>TalkTranslate</h1>
-  </div>
-  <p>Llámada de voz con traducción en vivo</p>
+      <div class="field">
+        <label>👤 Tu nombre</label>
+        <input id="nickname" placeholder="Escribe tu nombre" maxlength="20">
+      </div>
 
-  <input id="nickname" placeholder="Tu nombre" maxlength="20">
+      <div class="lang-selector">
+        <div class="lang-col">
+          <label>🗣️ Hablas</label>
+          <select id="my-lang">
+            <option value="es">Español</option><option value="en">English</option>
+            <option value="pt">Português</option><option value="fr">Français</option>
+            <option value="de">Deutsch</option><option value="ja">日本語</option>
+          </select>
+        </div>
+        <div class="lang-arrow">→</div>
+        <div class="lang-col">
+          <label>🌍 Traducir a</label>
+          <select id="target-lang">
+            <option value="en">English</option><option value="es">Español</option>
+            <option value="pt">Português</option><option value="fr">Français</option>
+            <option value="de">Deutsch</option><option value="ja">日本語</option>
+          </select>
+        </div>
+      </div>
 
-  <div class="lang-row">
-    <div class="lang-group">
-      <label class="lang-label">🗣️ Hablas</label>
-      <select id="my-lang">
-        <option value="es">Español</option><option value="en">English</option>
-        <option value="pt">Português</option><option value="fr">Français</option>
-        <option value="de">Deutsch</option><option value="ja">日本語</option>
-      </select>
+      <button class="btn btn-primary" onclick="createRoom()">Crear sala</button>
+      <div class="divider">— o —</div>
+      <input id="room-input" placeholder="ID de sala (ej: abc123)">
+      <button class="btn btn-secondary" onclick="joinRoom()">Unirse</button>
     </div>
-    <div class="lang-arrow">→</div>
-    <div class="lang-group">
-      <label class="lang-label">🌍 Traducir a</label>
-      <select id="target-lang">
-        <option value="en">English</option><option value="es">Español</option>
-        <option value="pt">Português</option><option value="fr">Français</option>
-        <option value="de">Deutsch</option><option value="ja">日本語</option>
-      </select>
-    </div>
   </div>
 
-  <button class="btn-primary" onclick="createRoom()">Crear sala</button>
-  <div class="divider">— o —</div>
-  <input id="room-input" placeholder="ID de sala (ej: abc123)">
-  <button class="btn-secondary" onclick="joinRoom()">Unirse</button>
+  <!-- CHAT ROOM -->
+  <div class="room hidden" id="room">
+    <div class="chat-header">
+      <div class="chat-header-info">
+        <div class="chat-header-top">
+          <span class="chat-title">TalkTranslate</span>
+          <span class="room-badge" id="room-id-display"></span>
+        </div>
+        <div class="chat-participants" id="participants-msg"></div>
+      </div>
+      <div class="chat-header-langs">
+        <select id="chat-my-lang" class="lang-select-sm"></select>
+        <span class="lang-arrow-sm">→</span>
+        <select id="chat-target-lang" class="lang-select-sm"></select>
+      </div>
+      <button class="btn btn-leave" onclick="leaveRoom()" title="Salir">✕</button>
+    </div>
+
+    <div class="chat-messages" id="chat-msgs">
+      <div class="msg-placeholder" id="msg-placeholder">
+        <p>Conéctate con alguien para empezar a chatear</p>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <input id="chat-input" placeholder="Escribe un mensaje..." maxlength="500">
+      <button class="btn btn-send" onclick="sendChat()" id="send-btn">Enviar</button>
+    </div>
+  </div>
 </div>
 
-<div class="card hidden" id="room">
-  <div class="header">
-    <svg width="32" height="32" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" stroke="#6c5ce7" stroke-width="2.5" fill="none"/><path d="M16 28c0-4.418 3.582-8 8-8s8 3.582 8 8" stroke="#6c5ce7" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="24" cy="18" r="4" stroke="#6c5ce7" stroke-width="2" fill="none"/></svg>
-    <h1 style="font-size:18px">TalkTranslate</h1>
-  </div>
-  <p style="font-size:12px">Sala: <span id="room-id-display" style="font-family:monospace;color:#6c5ce7"></span></p>
-  <p style="font-size:11px;color:#555577;margin-bottom:4px"><span id="participants-msg"></span></p>
-  <p style="font-size:11px;color:#555577;margin-bottom:12px"><span id="status-msg"></span></p>
-  <p style="font-size:11px;color:#555577;margin-bottom:12px" id="lang-display"></p>
-
-  <audio id="remote-audio" autoplay></audio>
-
-  <div class="sub-box" id="sub-box">
-    <div style="font-size:11px;color:#555577;margin-bottom:2px"><span id="sub-source-label">🗣️ Tú</span> <span style="color:#3a3a50">→</span> <span id="sub-target-label">🌍 Traducido</span></div>
-    <div class="sub-original" id="sub-original">🎤 Escuchando...</div>
-    <div class="sub-translated" id="sub-translated">Traducción aparecerá aquí</div>
-  </div>
-
-  <div class="controls">
-    <button class="btn-mic" id="mic-btn" onclick="toggleMic()">🎤 Activo</button>
-    <button class="btn-danger" onclick="leaveRoom()">Colgar</button>
-  </div>
-
-  <div class="chat-box">
-    <div class="chat-msgs" id="chat-msgs"></div>
-    <div class="chat-input-row">
-      <input id="chat-input" placeholder="Escribe un mensaje..." maxlength="200" onkeydown="if(event.key==='Enter')sendChat()">
-      <button class="btn-primary" onclick="sendChat()">Enviar</button>
-    </div>
-  </div>
-</div>
-
-<script>
-// ============== GLOBALS ==============
-let socket, peer, myStream, roomId, conn, peerId;
-let recognition, isCallActive = false;
-let micPromise;
-const lobby = document.getElementById('lobby');
-const room = document.getElementById('room');
-
-// ============== WEBSOCKET (señalización) ==============
-function connectSocket() {
-  socket = io();
-
-  socket.on('room-participants', (participants) => {
-    const nicknames = participants.map(p => p.nickname).join(', ');
-    document.getElementById('participants-msg').textContent =
-      `👤 ${participants.length} en sala: ${nicknames}`;
-  });
-
-  socket.on('user-connected', async (userId) => {
-    peerId = userId;
-    await waitForMic();
-    startCall();
-  });
-
-  socket.on('offer', async ({ offer, from }) => {
-    peerId = from;
-    if (!peer) await createPeer();
-    const remoteDesc = new RTCSessionDescription(offer);
-    await peer.setRemoteDescription(remoteDesc);
-    const answer = await peer.createAnswer();
-    await peer.setLocalDescription(answer);
-    socket.emit('answer', { target: from, answer });
-    document.getElementById('status-msg').textContent = 'Conectado ✅';
-    isCallActive = true;
-    startSTT();
-  });
-
-  socket.on('answer', async ({ answer }) => {
-    await peer.setRemoteDescription(new RTCSessionDescription(answer));
-    document.getElementById('status-msg').textContent = 'Conectado ✅';
-    isCallActive = true;
-    startSTT();
-  });
-
-  socket.on('ice-candidate', ({ candidate }) => {
-    if (peer) peer.addIceCandidate(new RTCIceCandidate(candidate));
-  });
-
-  socket.on('user-disconnected', () => {
-    isCallActive = false;
-    if (recognition) recognition.stop();
-  });
-
-  socket.on('translation', ({ text, lang }) => {
-    document.getElementById('sub-original').textContent = '🔊 ' + text;
-    speakTranslation(text, lang);
-  });
-
-  socket.on('chat-message', ({ nickname, original, translated }) => {
-    const chat = document.getElementById('chat-msgs');
-    const el = document.createElement('div');
-    el.innerHTML = `<span class="nick">${nickname}</span><br><span class="trans">${escapeHtml(translated)}</span>`;
-    if (original !== translated) el.innerHTML += `<br><span class="orig">${escapeHtml(original)}</span>`;
-    chat.appendChild(el);
-    chat.scrollTop = chat.scrollHeight;
-  });
-}
-
-// ============== WEBRTC ==============
-async function createPeer() {
-  peer = new RTCPeerConnection({
-    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-  });
-
-  peer.onicecandidate = (e) => {
-    if (e.candidate) socket.emit('ice-candidate', { target: peerId, candidate: e.candidate });
-  };
-
-  peer.ontrack = (e) => {
-    document.getElementById('remote-audio').srcObject = e.streams[0];
-  };
-
-  if (myStream) myStream.getTracks().forEach((t) => peer.addTrack(t, myStream));
-}
-
-async function startCall() {
-  document.getElementById('status-msg').textContent = '⏳ Conectando...';
-  if (peer) peer.close();
-  await createPeer();
-  const offer = await peer.createOffer({ iceRestart: true });
-  await peer.setLocalDescription(offer);
-  socket.emit('offer', { target: peerId, offer });
-}
-
-// ============== STT + TRADUCCIÓN ==============
-function startSTT() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) { document.getElementById('sub-original').textContent = 'STT no soportado en este navegador'; return; }
-
-  const myLang = document.getElementById('my-lang').value;
-  recognition = new SpeechRecognition();
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.lang = myLang === 'es' ? 'es-ES' : myLang + '-' + myLang.toUpperCase();
-  recognition.maxAlternatives = 1;
-
-  let lastText = '';
-  recognition.onresult = async (e) => {
-    let text = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) text += e.results[i][0].transcript;
-    if (!text || text === lastText) return;
-    lastText = text;
-
-    document.getElementById('sub-original').textContent = '🎤 ' + text;
-    document.getElementById('sub-translated').textContent = '🌍 Traduciendo...';
-
-    const targetLang = document.getElementById('target-lang').value;
-    try {
-      const res = await fetch('/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: text, source: myLang, target: targetLang, format: 'text' }),
-      });
-      const data = await res.json();
-      const translated = data.translatedText || text;
-
-      document.getElementById('sub-translated').textContent = '🌍 ' + translated;
-
-      // Mandar traducción al otro
-      socket.emit('translation', { roomId, text: translated, lang: targetLang });
-    } catch {
-      document.getElementById('sub-translated').textContent = '🌍 ' + text + ' (traducción offline)';
-    }
-  };
-
-  recognition.onerror = (e) => {
-    document.getElementById('sub-original').textContent = '🎤 Error: ' + e.error;
-    recognition.stop();
-    setTimeout(() => { if (isCallActive) recognition.start(); }, 1000);
-  };
-
-  recognition.onend = () => {
-    if (isCallActive) recognition.start();
-  };
-
-  recognition.start();
-}
-
-function speakTranslation(text, lang) {
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = lang || 'en-US';
-  utterance.rate = 0.85;
-  utterance.pitch = 1;
-  window.speechSynthesis.speak(utterance);
-}
-
-function escapeHtml(text) {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
-}
-
-async function requestMic() {
-  try {
-    myStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-  } catch {
-    myStream = null;
-  }
-}
-
-// Esperar a que el micrófono esté listo antes de iniciar llamada
-async function waitForMic() {
-  if (micPromise) await micPromise;
-}
-
-// ============== UI ==============
-function updateLangDisplay() {
-  const my = document.getElementById('my-lang');
-  const target = document.getElementById('target-lang');
-  const myText = my.options[my.selectedIndex].text;
-  const targetText = target.options[target.selectedIndex].text;
-  document.getElementById('lang-display').textContent = `🗣️ ${myText} → 🌍 ${targetText}`;
-  document.getElementById('sub-source-label').textContent = `🗣️ Tú (${myText})`;
-  document.getElementById('sub-target-label').textContent = `🌍 ${targetText}`;
-}
-
-function createRoom() {
-  const nick = document.getElementById('nickname').value.trim() || 'Anon';
-
-  document.getElementById('participants-msg').textContent = '';
-  document.getElementById('status-msg').textContent = 'Conectando al servidor...';
-  connectSocket();
-
-  socket.on('connect', async () => {
-    roomId = Math.random().toString(36).substring(2, 8);
-    socket.emit('join-room', { roomId, nickname: nick });
-    lobby.classList.add('hidden');
-    room.classList.remove('hidden');
-    document.getElementById('room-id-display').textContent = roomId;
-    updateLangDisplay();
-
-    document.getElementById('status-msg').textContent = '⏳ Solicitando micrófono...';
-    micPromise = requestMic();
-    await micPromise;
-    document.getElementById('status-msg').textContent = '⏳ Comparte este ID con tu amigo';
-  });
-}
-
-function joinRoom() {
-  const input = document.getElementById('room-input').value.trim();
-  if (!input) return;
-  const nick = document.getElementById('nickname').value.trim() || 'Anon';
-
-  document.getElementById('participants-msg').textContent = '';
-  document.getElementById('status-msg').textContent = 'Conectando al servidor...';
-  connectSocket();
-
-  socket.on('connect', async () => {
-    roomId = input;
-    socket.emit('join-room', { roomId, nickname: nick });
-    lobby.classList.add('hidden');
-    room.classList.remove('hidden');
-    document.getElementById('room-id-display').textContent = roomId;
-    updateLangDisplay();
-
-    document.getElementById('status-msg').textContent = '⏳ Solicitando micrófono...';
-    micPromise = requestMic();
-    await micPromise;
-    document.getElementById('status-msg').textContent = '⏳ Uniéndose a la sala...';
-  });
-}
-
-function leaveRoom() {
-  isCallActive = false;
-  if (recognition) recognition.stop();
-  if (peer) { peer.close(); peer = null; }
-  if (myStream) { myStream.getTracks().forEach(t => t.stop()); myStream = null; }
-  if (socket) { socket.disconnect(); socket = null; }
-  room.classList.add('hidden');
-  lobby.classList.remove('hidden');
-  document.getElementById('participants-msg').textContent = '';
-  document.getElementById('status-msg').textContent = '';
-  document.getElementById('sub-original').textContent = '🎤 Escuchando...';
-  document.getElementById('sub-translated').textContent = '🌍 Traducción aparecerá aquí';
-  document.getElementById('chat-msgs').innerHTML = '';
-  document.getElementById('lang-display').textContent = '';
-  document.getElementById('mic-btn').textContent = '🎤 Activo';
-  document.getElementById('mic-btn').classList.remove('muted');
-}
-
-function toggleMic() {
-  if (!myStream) return;
-  const enabled = !myStream.getAudioTracks()[0].enabled;
-  myStream.getAudioTracks().forEach(t => t.enabled = enabled);
-  const btn = document.getElementById('mic-btn');
-  btn.textContent = enabled ? '🎤 Activo' : '🔇 Silenciado';
-  btn.classList.toggle('muted', !enabled);
-}
-
-async function sendChat() {
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-
-  const myLang = document.getElementById('my-lang').value;
-  const targetLang = document.getElementById('target-lang').value;
-  const nick = document.getElementById('nickname').value.trim() || 'Anon';
-  let translated = text;
-
-  if (myLang !== targetLang) {
-    try {
-      const res = await fetch('/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: text, source: myLang, target: targetLang, format: 'text' }),
-      });
-      const data = await res.json();
-      translated = data.translatedText || text;
-    } catch {}
-  }
-
-  const chat = document.getElementById('chat-msgs');
-  const el = document.createElement('div');
-  el.innerHTML = `<span class="nick">${escapeHtml(nick)} (tú)</span><br><span class="trans">${escapeHtml(translated)}</span>`;
-  if (translated !== text) el.innerHTML += `<br><span class="orig">${escapeHtml(text)}</span>`;
-  chat.appendChild(el);
-  chat.scrollTop = chat.scrollHeight;
-
-  socket.emit('chat-message', { roomId, original: text, translated, lang: targetLang });
-}
-</script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
