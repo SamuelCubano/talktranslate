@@ -218,7 +218,7 @@ function startSTT() {
 
     const targetLang = document.getElementById('target-lang').value;
     try {
-      const res = await fetch('https://libretranslate.com/translate', {
+      const res = await fetch('/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ q: text, source: myLang, target: targetLang, format: 'text' }),
@@ -360,7 +360,7 @@ async function sendChat() {
 
   if (myLang !== targetLang) {
     try {
-      const res = await fetch('https://libretranslate.com/translate', {
+      const res = await fetch('/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ q: text, source: myLang, target: targetLang, format: 'text' }),

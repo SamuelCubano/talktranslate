@@ -8,6 +8,22 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.json());
+
+app.post('/translate', async (req, res) => {
+  const { body } = req;
+  for (const url of ['https://libretranslate.com/translate', 'https://translate.argosopentech.com/translate']) {
+    try {
+      const resp = await fetch(url, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: body.q, source: body.source, target: body.target, format: 'text' })
+      });
+      if (!resp.ok) throw new Error('fail');
+      return res.json(await resp.json());
+    } catch {}
+  }
+  res.json({ translatedText: body.q });
+});
 
 const rooms = {};
 
