@@ -304,12 +304,58 @@ input:focus,select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px va
 }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
+/* ===== HAMBURGER ===== */
+.hamburger {
+  display:none; position:fixed; top:12px; left:12px;
+  width:36px; height:36px; border-radius:10px;
+  background:var(--bg-card); border:1px solid var(--border);
+  flex-direction:column; align-items:center; justify-content:center; gap:4px;
+  cursor:pointer; z-index:20;
+  transition:background .3s;
+}
+.hamburger span {
+  display:block; width:18px; height:2px; border-radius:2px;
+  background:var(--text-primary); transition:all .3s;
+}
+.hamburger.open span:nth-child(1) { transform:rotate(45deg) translate(4px,4px); }
+.hamburger.open span:nth-child(2) { opacity:0; }
+.hamburger.open span:nth-child(3) { transform:rotate(-45deg) translate(4px,-4px); }
+
+.sidebar-overlay {
+  display:none; position:fixed; inset:0; z-index:8;
+  background:rgba(0,0,0,.5);
+  opacity:0; transition:opacity .3s;
+}
+.sidebar-overlay.show { opacity:1; }
+
 /* ===== RESPONSIVE ===== */
 @media(max-width:700px) {
-  .sidebar { width:48px; }
-  .nav-btn { width:34px; height:34px; border-radius:10px; }
-  .sidebar-logo { width:30px; height:30px; font-size:12px; }
-  .room-container { max-width:100%; }
-  .lobby-center { padding:12px; }
+  .hamburger { display:flex; }
+
+  .sidebar {
+    position:fixed; left:0; top:0; bottom:0; z-index:9;
+    transform:translateX(-100%);
+    transition:transform .3s cubic-bezier(.16,1,.3,1);
+    width:56px;
+  }
+  .sidebar.open { transform:translateX(0); }
+  .sidebar-overlay.show { display:block; }
+
+  .nav-btn { width:36px; height:36px; border-radius:10px; }
+  .sidebar-logo { width:32px; height:32px; font-size:12px; }
+
+  .main { margin-left:0; }
+
+  .room-container { max-width:100%; border-radius:0; }
+  .lobby-center { padding:52px 12px 12px; }
+  .settings-container { padding:52px 12px 12px; }
   .lobby-card { padding:24px 20px; }
+
+  .room-header { padding:10px 12px; padding-left:52px; }
+  .chat-messages { padding:12px; }
+  .msg { max-width:90%; }
+  .lang-badge { max-width:65px; font-size:11px; }
+
+  .settings-container { padding:12px; }
+  .settings-card, .about-card { padding:20px; }
 }

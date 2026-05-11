@@ -171,9 +171,27 @@ function connectSocket(cb) {
   });
 }
 
+// ===== SIDEBAR TOGGLE (mobile) =====
+function toggleSidebar() {
+  document.querySelector('.sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+  document.getElementById('hamburger').classList.toggle('open');
+}
+function closeSidebar() {
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('show');
+  document.getElementById('hamburger').classList.remove('open');
+}
+
+document.getElementById('hamburger')?.addEventListener('click', toggleSidebar);
+document.getElementById('sidebar-overlay')?.addEventListener('click', closeSidebar);
+
 // ===== NAVIGATION =====
 document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
-  btn.addEventListener('click', () => switchView(btn.dataset.view));
+  btn.addEventListener('click', () => {
+    switchView(btn.dataset.view);
+    closeSidebar();
+  });
 });
 
 document.getElementById('theme-toggle')?.addEventListener('click', () => {
@@ -181,6 +199,7 @@ document.getElementById('theme-toggle')?.addEventListener('click', () => {
   const next = current === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === next));
+  closeSidebar();
 });
 
 document.querySelectorAll('.theme-btn').forEach(btn => {
