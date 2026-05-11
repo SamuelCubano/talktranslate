@@ -27,6 +27,15 @@ button { width:100%; padding:12px; border-radius:8px; border:none; font-size:15p
 .divider { color:#3a3a50; margin:16px 0; font-size:13px; }
 .header { display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:16px; }
 .status { font-size:11px; color:#555577; margin-top:8px; }
+.lang-label { display:block; text-align:left; font-size:12px; color:#8888aa; margin-bottom:4px; font-weight:500; }
+.lang-label:not(:first-of-type) { margin-top:4px; }
+.lang-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.lang-row .lang-group { flex:1; }
+.lang-row select { margin:0; }
+.lang-arrow { color:#6c5ce7; font-size:20px; padding-top:8px; }
+.lang-badge { display:inline-block; font-size:11px; padding:2px 8px; border-radius:4px; margin-left:4px; }
+.lang-badge.source { background:#6c5ce733; color:#a29bfe; }
+.lang-badge.target { background:#00cec933; color:#00cec9; }
 .controls { display:flex; gap:8px; margin-top:16px; }
 .controls button { flex:1; }
 .btn-mic { background:#2a2a40; color:#e0e0f0; }
@@ -53,16 +62,26 @@ button { width:100%; padding:12px; border-radius:8px; border:none; font-size:15p
   <p>Llámada de voz con traducción en vivo</p>
 
   <input id="nickname" placeholder="Tu nombre" maxlength="20">
-  <select id="my-lang">
-    <option value="es">Español</option><option value="en">English</option>
-    <option value="pt">Português</option><option value="fr">Français</option>
-    <option value="de">Deutsch</option><option value="ja">日本語</option>
-  </select>
-  <select id="target-lang">
-    <option value="en">English</option><option value="es">Español</option>
-    <option value="pt">Português</option><option value="fr">Français</option>
-    <option value="de">Deutsch</option><option value="ja">日本語</option>
-  </select>
+
+  <div class="lang-row">
+    <div class="lang-group">
+      <label class="lang-label">🗣️ Hablas</label>
+      <select id="my-lang">
+        <option value="es">Español</option><option value="en">English</option>
+        <option value="pt">Português</option><option value="fr">Français</option>
+        <option value="de">Deutsch</option><option value="ja">日本語</option>
+      </select>
+    </div>
+    <div class="lang-arrow">→</div>
+    <div class="lang-group">
+      <label class="lang-label">🌍 Traducir a</label>
+      <select id="target-lang">
+        <option value="en">English</option><option value="es">Español</option>
+        <option value="pt">Português</option><option value="fr">Français</option>
+        <option value="de">Deutsch</option><option value="ja">日本語</option>
+      </select>
+    </div>
+  </div>
 
   <button class="btn-primary" onclick="createRoom()">Crear sala</button>
   <div class="divider">— o —</div>
@@ -78,12 +97,14 @@ button { width:100%; padding:12px; border-radius:8px; border:none; font-size:15p
   <p style="font-size:12px">Sala: <span id="room-id-display" style="font-family:monospace;color:#6c5ce7"></span></p>
   <p style="font-size:11px;color:#555577;margin-bottom:4px"><span id="participants-msg"></span></p>
   <p style="font-size:11px;color:#555577;margin-bottom:12px"><span id="status-msg"></span></p>
+  <p style="font-size:11px;color:#555577;margin-bottom:12px" id="lang-display"></p>
 
   <audio id="remote-audio" autoplay></audio>
 
   <div class="sub-box" id="sub-box">
+    <div style="font-size:11px;color:#555577;margin-bottom:2px"><span id="sub-source-label">🗣️ Tú</span> <span style="color:#3a3a50">→</span> <span id="sub-target-label">🌍 Traducido</span></div>
     <div class="sub-original" id="sub-original">🎤 Escuchando...</div>
-    <div class="sub-translated" id="sub-translated">🌍 Traducción aparecerá aquí</div>
+    <div class="sub-translated" id="sub-translated">Traducción aparecerá aquí</div>
   </div>
 
   <div class="controls">
@@ -277,6 +298,16 @@ async function waitForMic() {
 }
 
 // ============== UI ==============
+function updateLangDisplay() {
+  const my = document.getElementById('my-lang');
+  const target = document.getElementById('target-lang');
+  const myText = my.options[my.selectedIndex].text;
+  const targetText = target.options[target.selectedIndex].text;
+  document.getElementById('lang-display').textContent = `🗣️ ${myText} → 🌍 ${targetText}`;
+  document.getElementById('sub-source-label').textContent = `🗣️ Tú (${myText})`;
+  document.getElementById('sub-target-label').textContent = `🌍 ${targetText}`;
+}
+
 function createRoom() {
   const nick = document.getElementById('nickname').value.trim() || 'Anon';
 
@@ -290,6 +321,7 @@ function createRoom() {
     lobby.classList.add('hidden');
     room.classList.remove('hidden');
     document.getElementById('room-id-display').textContent = roomId;
+    updateLangDisplay();
 
     document.getElementById('status-msg').textContent = '⏳ Solicitando micrófono...';
     micPromise = requestMic();
@@ -313,6 +345,7 @@ function joinRoom() {
     lobby.classList.add('hidden');
     room.classList.remove('hidden');
     document.getElementById('room-id-display').textContent = roomId;
+    updateLangDisplay();
 
     document.getElementById('status-msg').textContent = '⏳ Solicitando micrófono...';
     micPromise = requestMic();
@@ -334,6 +367,7 @@ function leaveRoom() {
   document.getElementById('sub-original').textContent = '🎤 Escuchando...';
   document.getElementById('sub-translated').textContent = '🌍 Traducción aparecerá aquí';
   document.getElementById('chat-msgs').innerHTML = '';
+  document.getElementById('lang-display').textContent = '';
   document.getElementById('mic-btn').textContent = '🎤 Activo';
   document.getElementById('mic-btn').classList.remove('muted');
 }
