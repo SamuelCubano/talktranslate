@@ -14,30 +14,18 @@ app.post('/translate', async (req, res) => {
   const { q, source, target } = req.body;
   if (!q || !source || !target) return res.json({ translatedText: q });
 
-  // 1. Try LibreTranslate public instances
-  for (const url of ['https://libretranslate.com/translate', 'https://translate.argosopentech.com/translate']) {
-    try {
-      const resp = await fetch(url, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q, source, target, format: 'text' })
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.translatedText) return res.json(data);
-      }
-    } catch {}
-  }
-
-  // 2. Fallback: MyMemory API (no key needed)
   try {
-    const resp = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(q)}&langpair=${source}|${target}`);
+    const resp = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(q.slice(0, 500))}&langpair=${source}|${target}`);
     if (resp.ok) {
       const data = await resp.json();
       if (data?.responseData?.translatedText) {
         return res.json({ translatedText: data.responseData.translatedText });
       }
     }
-  } catch {}
+    console.log('MyMemory error:', resp.status);
+  } catch (e) {
+    console.log('MyMemory exception:', e.message);
+  }
 
   res.json({ translatedText: q });
 });
